@@ -1,12 +1,15 @@
-const { exec } = require('../db/mysql')
+const { exec, escape } = require('../db/mysql')
+const xss = require('xss')
 
 const getList = (author, keyword) => {
+  author = escape(author)
+  keyword = escape(keyword)
   let sql = `select * from blogs where 1=1 `
   if (author) {
-    sql += `and author='${author}'`
+    sql += `and author=${author}`
   }
   if (keyword) {
-    sql += `and title like '%${keyword}%' `
+    sql += `and title like %${keyword}% `
   }
   sql += `order by createtime desc;`
 
@@ -15,7 +18,8 @@ const getList = (author, keyword) => {
 }
 
 const getDetail = (id) => {
-  const sql = `select * from blogs where id='${id}'`
+  id = escape(id)
+  const sql = `select * from blogs where id=${id}`
   
   return exec(sql).then(rows => {
     return rows[0]
@@ -28,7 +32,7 @@ const newBLog = (blogData = {}) => {
   
   const sql = `
     insert into blogs (title, content, createtime, author)
-    values ('${title}', '${content}', '${createTime}', '${author}')
+    values ('${xss(title)}', '${xss(content)}', '${createTime}', '${author}')
   `
 
   return exec(sql).then(inserData => {
@@ -43,7 +47,7 @@ const updateBLog = (id, blogData = {}) => {
   const { title, content } = blogData
 
   const sql = `
-    update blogs set title='${title}', content='${content}' where id=${id}
+    update blogs set title='${xss(title)}', content='${xss(content)}' where id=${id}
   `
 
   return exec(sql).then(updateData => {
@@ -56,7 +60,9 @@ const updateBLog = (id, blogData = {}) => {
 
 const delBLog = (id, author) => {
   // id 博客 id
-  const sql = `delete from blogs where id=${id} and author='${author}'`
+  author = escape(author)
+  id = escape(id)
+  const sql = `delete from blogs where id=${id} and author=${author}`
 
   return exec(sql).then(delData => {
     if (delData.affectedRows > 0) {
